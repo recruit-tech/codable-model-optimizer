@@ -14,7 +14,7 @@ Use setup.py
 .. code-block:: bash
 
     # Master branch
-    $ git clone https://github.com/recruit-tech/codable-optimizer
+    $ git clone https://github.com/recruit-tech/codable-model-optimizer
     $ python3 setup.py install
 
 Use pip
@@ -23,9 +23,9 @@ Use pip
 .. code-block:: bash
 
     # Master branch
-    $ pip3 install git+https://github.com/recruit-tech/codable-optimizer
+    $ pip3 install git+https://github.com/recruit-tech/codable-model-optimizer
     # Specific tag (or branch, commit hash)
-    $ pip3 install git+https://github.com/recruit-tech/codable-optimizer@v0.1.0
+    $ pip3 install git+https://github.com/recruit-tech/codable-model-optimizer@v0.1.0
 
 .. index-end-installation-marker
 
