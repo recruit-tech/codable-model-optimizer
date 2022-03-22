@@ -17,6 +17,6 @@ setup(
     packages=find_packages(exclude='sample'),
     keywords=package_info.__keywords__,
     zip_safe=False,
-    install_requires=['numpy==1.22.0'],
+    install_requires=['numpy>=1.22.0'],
     python_requires='>=3.8'
 )
