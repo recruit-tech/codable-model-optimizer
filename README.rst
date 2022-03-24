@@ -1,3 +1,6 @@
+.. image:: https://readthedocs.org/projects/codable-model-optimizer/badge/?version=latest
+
+
 =========================
 codable-model-optimizer
 =========================
