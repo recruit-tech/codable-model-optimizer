@@ -1,12 +1,12 @@
 # (major, minor, patch, prerelease)
-VERSION = (0, 1, 0, '')
+VERSION = (0, 0, 2, '')
 __shortversion__ = '.'.join(map(str, VERSION[:3]))
 __version__ = '.'.join(map(str, VERSION[:3])) + ''.join(VERSION[3:])
 
 __package_name__ = 'codableopt'
-__author_names__ = 'Tomomitsu Motohashi'
-__author_emails__ = 'tomomoto1983@gmail.com'
-__maintainer_names__ = 'Tanahashi Kotaro'
+__author_names__ = 'Tomomitsu Motohashi, Kotaro Tanahashi'
+__author_emails__ = 'tomomoto1983@gmail.com, tanahashi@r.recruit.co.jp'
+__maintainer_names__ = 'Kotaro Tanahashi'
 __maintainer_emails__ = 'tanahashi@r.recruit.co.jp'
 __homepage__ = ''
 __repository_url__ = 'https://github.com/recruit-tech/codable-model-optimizer'

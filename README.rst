@@ -5,7 +5,7 @@ Optimization problem meta-heuristics solver for easy modeling.
 
 .. index-start-installation-marker
 
-Installation:
+Installation
 ================
 
 Use setup.py
@@ -29,7 +29,7 @@ Use pip
 
 .. index-end-installation-marker
 
-Example Usage:
+Example Usage
 =================
 
 Sample1

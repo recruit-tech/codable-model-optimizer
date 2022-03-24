@@ -1,6 +1,17 @@
 #!/usr/bin/env python
 from setuptools import setup, find_packages
-from codableopt import package_info
+import os
+
+class PackageInfo(object):
+    def __init__(self, info_file):
+        with open(info_file) as f:
+            exec(f.read(), self.__dict__)
+        self.__dict__.pop('__builtins__', None)
+
+    def __getattribute__(self, name):
+        return super(PackageInfo, self).__getattribute__(name)
+
+package_info = PackageInfo(os.path.join('codableopt', 'package_info.py'))
 
 setup(
     name=package_info.__package_name__,
@@ -17,6 +28,6 @@ setup(
     packages=find_packages(exclude='sample'),
     keywords=package_info.__keywords__,
     zip_safe=False,
-    install_requires=['numpy==1.22.0'],
-    python_requires='>=3.8'
+    install_requires=['numpy>=1.22.0'],
+    python_requires='>=3.8, <3.11'
 )
