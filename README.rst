@@ -1,6 +1,12 @@
+.. image:: https://pepy.tech/badge/codableopt
+    :target: https://pepy.tech/project/codableopt
+    
 .. image:: https://readthedocs.org/projects/codable-model-optimizer/badge/?version=latest
+    :target: https://codable-model-optimizer.readthedocs.io/ja/latest/?badge=latest
+    :alt: Documentation Status
 
 
+    
 =========================
 codable-model-optimizer
 =========================
