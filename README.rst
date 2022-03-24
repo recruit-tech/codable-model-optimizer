@@ -17,6 +17,13 @@ Optimization problem meta-heuristics solver for easy modeling.
 Installation
 ================
 
+Use pip
+-------
+
+.. code-block:: bash
+
+    $ pip install codableopt
+   
 Use setup.py
 ------------
 
@@ -26,15 +33,7 @@ Use setup.py
     $ git clone https://github.com/recruit-tech/codable-model-optimizer
     $ python3 setup.py install
 
-Use pip
--------
 
-.. code-block:: bash
-
-    # Master branch
-    $ pip3 install git+https://github.com/recruit-tech/codable-model-optimizer
-    # Specific tag (or branch, commit hash)
-    $ pip3 install git+https://github.com/recruit-tech/codable-model-optimizer@v0.1.0
 
 .. index-end-installation-marker
 
