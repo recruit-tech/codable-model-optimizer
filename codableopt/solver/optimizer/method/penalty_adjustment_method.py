@@ -30,7 +30,7 @@ class PenaltyAdjustmentMethod(OptimizerMethod):
     def __init__(
             self,
             steps: int,
-            proposed_rate_of_random_movement: float = 0.9,
+            proposed_rate_of_random_movement: float = 0.95,
             delta_to_update_penalty_rate: float = 0.2,
             steps_threshold_to_judge_local_solution: Optional[int] = 100,
             history_value_size: int = 5,
