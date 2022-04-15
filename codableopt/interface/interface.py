@@ -857,7 +857,20 @@ class Objective:
         if isinstance(self._objective, Formula):
             return self._objective.number_variables
         else:
-            return [x for x in self._args_map.values() if isinstance(x, Variable)]
+            # TODO n次元対応
+            variables = []
+            for x in self._args_map.values():
+                if isinstance(x, Variable):
+                    variables.append(x)
+                elif isinstance(x, list) and isinstance(x[0], Variable):
+                    variables.extend(x)
+                elif isinstance(x, list) and isinstance(x[0], list) and \
+                        isinstance(x[0][0], Variable):
+                    variables.extend(x[0])
+                elif isinstance(x, list) and isinstance(x[0], list) and \
+                        isinstance(x[0][0], list) and isinstance(x[0][0][0], Variable):
+                    variables.extend(x[0][0])
+            return variables
 
     @property
     def number_variables(self):
@@ -987,6 +1000,7 @@ class Problem:
         category_args_map = {}
         parameter_args_map = {}
 
+        # TODO n次元対応
         for arg_name in args_map.keys():
             arg_value = args_map[arg_name]
             if isinstance(arg_value, NumberVariable):
@@ -996,11 +1010,37 @@ class Problem:
                 var_names = [[x[0] for x in y.to_names_and_coefficients()] for y in arg_value]
                 variable_args_map[arg_name] = var_names
 
+            elif isinstance(arg_value, list) and isinstance(arg_value[0], list) and \
+                    isinstance(arg_value[0][0], NumberVariable):
+                var_names = \
+                    [[[x[0] for x in y.to_names_and_coefficients()] for y in z] for z in arg_value]
+                variable_args_map[arg_name] = var_names
+
+            elif isinstance(arg_value, list) and isinstance(arg_value[0], list) and \
+                    isinstance(arg_value[0][0], list) and \
+                    isinstance(arg_value[0][0][0], NumberVariable):
+                var_names = [
+                    [[[x[0] for x in y.to_names_and_coefficients()] for y in z] for z in a]
+                    for a in arg_value]
+                variable_args_map[arg_name] = var_names
+
             elif isinstance(arg_value, CategoryVariable):
                 category_args_map[arg_name] = [arg_value.name]
 
             elif isinstance(arg_value, list) and isinstance(arg_value[0], CategoryVariable):
                 var_names = [[y.name] for y in arg_value]
+                category_args_map[arg_name] = var_names
+
+            elif isinstance(arg_value, list) and isinstance(arg_value[0], list) and \
+                    isinstance(arg_value[0][0], CategoryVariable):
+                var_names = [[[y.name] for y in z] for z in arg_value]
+                category_args_map[arg_name] = var_names
+
+            elif isinstance(arg_value, list) and \
+                    isinstance(arg_value[0], list) and \
+                    isinstance(arg_value[0][0], list) and \
+                    isinstance(arg_value[0][0][0], CategoryVariable):
+                var_names = [[[[y.name] for y in z] for z in a] for a in arg_value]
                 category_args_map[arg_name] = var_names
 
             else:

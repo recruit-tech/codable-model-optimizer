@@ -40,12 +40,23 @@ class SolverArgsMap:
         self._args = {}
         for parameter_key in args_map.parameter_args_map.keys():
             self._args[parameter_key] = args_map.parameter_args_map[parameter_key]
-
+        # TODO n次元対応
         self._single_vars_of_args = []
         self._multi_vars_of_args = []
+        self._2d_array_vars_of_args = []
+        self._3d_array_vars_of_args = []
         for var_key in args_map.variable_args_map.keys():
             value = args_map.variable_args_map[var_key]
-            if isinstance(value[0], list):
+            if isinstance(value[0], list) and isinstance(value[0][0], list) and \
+                    isinstance(value[0][0][0], list):
+                state_indexes_and_category_var = \
+                    [[[[solver_var_dict[x] for x in y] for y in z] for z in a] for a in value]
+                self._3d_array_vars_of_args.append((var_key, state_indexes_and_category_var))
+            elif isinstance(value[0], list) and isinstance(value[0][0], list):
+                state_indexes_and_category_var = \
+                    [[[solver_var_dict[x] for x in y] for y in z] for z in value]
+                self._2d_array_vars_of_args.append((var_key, state_indexes_and_category_var))
+            elif isinstance(value[0], list):
                 state_indexes_and_category_var = [[solver_var_dict[x] for x in y] for y in value]
                 self._multi_vars_of_args.append((var_key, state_indexes_and_category_var))
             else:
@@ -54,9 +65,19 @@ class SolverArgsMap:
 
         self._single_category_vars_of_args = []
         self._multi_category_vars_of_args = []
+        self._2d_array_category_vars_of_args = []
+        self._3d_array_category_vars_of_args = []
         for var_key in args_map.category_args_map.keys():
             value = args_map.category_args_map[var_key]
-            if isinstance(value[0], list):
+            if isinstance(value[0], list) and isinstance(value[0][0], list) and \
+                    isinstance(value[0][0][0], list):
+                state_indexes = \
+                    [[[[solver_var_dict[x] for x in y][0] for y in z] for z in a] for a in value]
+                self._3d_array_category_vars_of_args.append((var_key, state_indexes))
+            elif isinstance(value[0], list) and isinstance(value[0][0], list):
+                state_indexes = [[[solver_var_dict[x] for x in y][0] for y in z] for z in value]
+                self._2d_array_category_vars_of_args.append((var_key, state_indexes))
+            elif isinstance(value[0], list):
                 state_indexes = [[solver_var_dict[x] for x in y][0] for y in value]
                 self._multi_category_vars_of_args.append((var_key, state_indexes))
             else:
@@ -77,6 +98,13 @@ class SolverArgsMap:
         for args in self._multi_vars_of_args:
             self._args[f'{head_name}{args[0]}'] = [sum(state[x]) for x in args[1]]
 
+        for args in self._2d_array_vars_of_args:
+            self._args[f'{head_name}{args[0]}'] = [[sum(state[x]) for x in y] for y in args[1]]
+
+        for args in self._3d_array_vars_of_args:
+            self._args[f'{head_name}{args[0]}'] = \
+                [[[sum(state[x]) for x in y] for y in z] for z in args[1]]
+
         for args in self._single_category_vars_of_args:
             indexes, categories = args[1]
             self._args[f'{head_name}{args[0]}'] = \
@@ -86,6 +114,16 @@ class SolverArgsMap:
             self._args[f'{head_name}{args[0]}'] = \
                 [categories[([x for x, y in enumerate(state[indexes]) if y == 1][0])]
                  for indexes, categories in args[1]]
+
+        for args in self._2d_array_category_vars_of_args:
+            self._args[f'{head_name}{args[0]}'] = \
+                [[categories[([x for x, y in enumerate(state[indexes]) if y == 1][0])]
+                  for indexes, categories in z] for z in args[1]]
+
+        for args in self._3d_array_category_vars_of_args:
+            self._args[f'{head_name}{args[0]}'] = \
+                [[[categories[([x for x, y in enumerate(state[indexes]) if y == 1][0])]
+                   for indexes, categories in z] for z in a] for a in args[1]]
 
     @property
     def args(self):
