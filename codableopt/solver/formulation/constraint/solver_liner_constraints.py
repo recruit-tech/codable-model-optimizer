@@ -40,6 +40,11 @@ class SolverLinerConstraints:
             liner_constraints (List[SystemLinerConstraint]): 線形制約式のリスト
             coefficients: 各制約式の各変数の係数の二次元配列
         """
+        # 制約式が存在しない場合
+        self._no_constraints = False
+        if len(liner_constraints) == 0:
+            self._no_constraints = True
+
         # 各制約式の各変数の係数の二次元配列
         self._coefficients = coefficients
         # 各制約式の定数項の配列
@@ -48,8 +53,12 @@ class SolverLinerConstraints:
         self._include_no_zero_flags = np.array([0.0 if x.include_equal_to_zero else 1.0
                                                 for x in liner_constraints])
         # keyが変数のインデックス番号、valueがkeyで指定された変数が含まれている制約式のインデックス番号のリスト
-        self._non_zero_coefficients_index_dict: Dict[int, List[int]] = \
-            {x: self._coefficients[:, x] != 0 for x in range(coefficients.shape[1])}
+        if self._no_constraints:
+            self._non_zero_coefficients_index_dict = {}
+        else:
+            self._non_zero_coefficients_index_dict: Dict[int, List[int]] = \
+                {x: self._coefficients[:, x] != 0 for x in range(coefficients.shape[1])}
+
         # 各制約式のペナルティ係数の配列、初期値は1.0で固定とする
         self._init_penalty_coefficients = [np.double(1.0) for _ in liner_constraints]
 
@@ -70,6 +79,9 @@ class SolverLinerConstraints:
         Returns:
             全ての制約式の左項の合計値の配列
         """
+        if self._no_constraints:
+            return []
+
         return np.dot(self._coefficients, var_values) + self._constants
 
     def apply_proposal_to_constraint_sums(
@@ -85,6 +97,9 @@ class SolverLinerConstraints:
         Returns:
             解の遷移後の制約式の左項の合計値キャッシュ
         """
+        if self._no_constraints:
+            return []
+
         # deepcopyを排除する方が早いので、copyせず更新した答えを再度更新して元に戻す方法を採用
         constraint_sums = cashed_constraint_sums
         for proposal in proposals:
@@ -106,6 +121,9 @@ class SolverLinerConstraints:
         Returns:
             解の遷移前の制約式の左項の合計値キャッシュ
         """
+        if self._no_constraints:
+            return []
+
         # deepcopyを排除する方が早いので、copyせず更新した答えを再度更新して元に戻す方法を採用
         constraint_sums = cashed_constraint_sums
         for proposal in proposals:
