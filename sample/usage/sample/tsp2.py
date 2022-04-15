@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import random
+import math
 from itertools import combinations
 
 from codableopt import Problem, Objective, CategoryVariable, OptSolver, \
@@ -30,14 +31,23 @@ place_names = [f'P{no}' for no in range(PLACE_NUM)]
 
 # 距離生成関数
 def generate_distances(args_place_names):
-    distances = {}
-    for place_to_place in combinations(['start'] + args_place_names, 2):
-        distance_value = random.randint(20, 40)
-        distances[place_to_place] = distance_value
-        distances[tuple(reversed(place_to_place))] = distance_value
-    for place in ['start'] + args_place_names:
-        distances[(place, place)] = 0
-    return distances
+    # ポイント間の距離を生成
+    tmp_coordinates = {}
+    for x in ['start'] + args_place_names:
+        tmp_coordinates[x] = (random.randint(1, 1000), random.randint(1, 1000))
+
+    generated_distances = {}
+    for point_to_point in combinations(['start'] + args_place_names, 2):
+        coordinate_a = tmp_coordinates[point_to_point[0]]
+        coordinate_b = tmp_coordinates[point_to_point[1]]
+        distance_value = math.sqrt(math.pow(coordinate_a[0] - coordinate_b[0], 2) +
+                                   math.pow(coordinate_a[1] - coordinate_b[1], 2))
+        generated_distances[point_to_point] = distance_value
+        generated_distances[tuple(reversed(point_to_point))] = distance_value
+    for x in ['start'] + args_place_names:
+        generated_distances[(x, x)] = 0
+
+    return generated_distances
 
 
 # 朝の時間帯（Startからの出発地点までの合計距離が、0以上300以下の間）におけるポイント間の距離を生成
@@ -92,7 +102,7 @@ for place_name in place_names:
 
 # 最適化実施
 solver = OptSolver(round_times=4, debug=True, debug_unit_step=1000)
-method = PenaltyAdjustmentMethod(steps=10000, delta_to_update_penalty_rate=0.9)
+method = PenaltyAdjustmentMethod(steps=50000)
 answer, is_feasible = solver.solve(problem, method, n_jobs=-1)
 
 print(f'answer_is_feasible:{is_feasible}')

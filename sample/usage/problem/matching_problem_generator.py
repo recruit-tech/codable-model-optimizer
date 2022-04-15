@@ -166,6 +166,11 @@ class MatchingProblem:
     item_names: List[str]
     coupon_names: List[str]
     buy_rate_model: tree.DecisionTreeClassifier
+    max_display_num_per_item: int
+    max_display_num_per_coupon: int
+    customer_features_df: pd.DataFrame
+    item_features_df: pd.DataFrame
+    coupon_features_df: pd.DataFrame
 
 
 class MatchingProblemGenerator:
@@ -175,6 +180,10 @@ class MatchingProblemGenerator:
 
     @staticmethod
     def generate(customer_num: int, item_num: int) -> MatchingProblem:
+        # リミット値の計算
+        max_display_num_per_item = int(customer_num / item_num * 2)
+        max_display_num_per_coupon = int(customer_num / 4)
+
         # 学習モデルの生成
         data_generator = DataGenerator()
         train_df = data_generator.generate_train_dataset(data_num=300000)
@@ -191,6 +200,27 @@ class MatchingProblemGenerator:
         item_names = [item.name for item in items]
         coupon_names = [f'coupon_{coupon.down_price}' for coupon in coupons]
 
+        # パラメータをDataFrameに変換
+        customer_features_df = \
+            pd.DataFrame([[customer.attribute_a, customer.attribute_b, customer.attribute_c]
+                          for customer in customers],
+                         index=customer_names,
+                         columns=['customer_attribute_a',
+                                  'customer_attribute_b',
+                                  'customer_attribute_c'])
+        item_features_df = \
+            pd.DataFrame([[item.price, item.cost,
+                           item.attribute_a, item.attribute_b, item.attribute_c]
+                          for item in items],
+                         index=item_names,
+                         columns=['item_price',
+                                  'item_cost',
+                                  'item_attribute_a',
+                                  'item_attribute_b',
+                                  'item_attribute_c'])
+        coupon_features_df = pd.DataFrame([[coupon.down_price] for coupon in coupons],
+                                          index=coupon_names, columns=['coupon_down_price'])
+
         return MatchingProblem(
             customers=customers,
             items=items,
@@ -198,5 +228,10 @@ class MatchingProblemGenerator:
             customer_names=customer_names,
             item_names=item_names,
             coupon_names=coupon_names,
-            buy_rate_model=model
+            buy_rate_model=model,
+            max_display_num_per_item=max_display_num_per_item,
+            max_display_num_per_coupon=max_display_num_per_coupon,
+            customer_features_df=customer_features_df,
+            item_features_df=item_features_df,
+            coupon_features_df=coupon_features_df
         )

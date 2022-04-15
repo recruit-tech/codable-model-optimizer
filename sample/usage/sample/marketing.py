@@ -21,9 +21,9 @@ from codableopt import Problem, Objective, IntVariable, OptSolver, \
 # 顧客数、CM数を設定
 CUSTOMER_NUM = 1000
 CM_NUM = 100
-SELECTED_CM_LIMIT = 5
+SELECTED_CM_LIMIT = 10
 # 顧客がCMを見る確率を生成
-view_rates = np.random.rand(CUSTOMER_NUM, CM_NUM) / 30
+view_rates = np.random.rand(CUSTOMER_NUM, CM_NUM) / 10 / SELECTED_CM_LIMIT
 
 # CMの放送有無の変数を定義
 cm_times = [IntVariable(name=f'cm_{no}', lower=0, upper=1) for no in range(CM_NUM)]
@@ -37,7 +37,7 @@ def calculate_view_rate_sum(var_cm_times, para_non_view_rates):
     selected_cm_noes = \
         [cm_no for cm_no, var_cm_time in enumerate(var_cm_times) if var_cm_time == 1]
     view_rate_per_customers = np.ones(para_non_view_rates.shape[0]) \
-                              - np.prod(para_non_view_rates[:, selected_cm_noes], axis=1)
+        - np.prod(para_non_view_rates[:, selected_cm_noes], axis=1)
     return np.sum(view_rate_per_customers)
 
 
@@ -53,7 +53,7 @@ print(problem)
 
 # 最適化実施
 solver = OptSolver(round_times=2, debug=True, debug_unit_step=1000)
-method = PenaltyAdjustmentMethod(steps=50000)
+method = PenaltyAdjustmentMethod(steps=100000)
 answer, is_feasible = solver.solve(problem, method, n_jobs=-1)
 
 print(f'answer_is_feasible:{is_feasible}')
