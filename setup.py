@@ -2,6 +2,7 @@
 from setuptools import setup, find_packages
 import os
 
+
 class PackageInfo(object):
     def __init__(self, info_file):
         with open(info_file) as f:
@@ -10,6 +11,7 @@ class PackageInfo(object):
 
     def __getattribute__(self, name):
         return super(PackageInfo, self).__getattribute__(name)
+
 
 package_info = PackageInfo(os.path.join('codableopt', 'package_info.py'))
 
@@ -29,5 +31,5 @@ setup(
     keywords=package_info.__keywords__,
     zip_safe=False,
     install_requires=['numpy>=1.22.0'],
-    python_requires='>=3.8, <3.11'
+    python_requires='>=3.7, <3.11'
 )
