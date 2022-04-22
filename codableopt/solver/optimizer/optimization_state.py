@@ -104,8 +104,8 @@ class OptimizationState:
             self._var_array, proposals, self._penalty_coefficients,
             self._cashed_liner_constraint_sums)
 
-    def to_answer(self, var_value_array: np.array):
-        return self._problem.to_answer(var_value_array)
+    def decode(self, var_value_array: np.array):
+        return self._problem.decode_answer(var_value_array)
 
     def tune_penalty(self, var_value_arrays, penalty_strength):
         objective_scores = \

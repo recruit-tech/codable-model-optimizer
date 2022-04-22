@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from codableopt.interface.interface import Problem
@@ -63,6 +63,7 @@ class OptSolver:
             self,
             problem: Problem,
             method: OptimizerMethod,
+            init_answers: Optional[List[Dict[str, Any]]] = None,
             penalty_strength: float = 1.0,
             n_jobs: int = 1):
         """最適化を実施する関数。
@@ -70,9 +71,9 @@ class OptSolver:
         Args:
             problem (OptimizationProblem): 最適化問題
             method (OptimizerMethod): 最適化手法
+            init_answers: 初期解リスト、初期解を指定したい時に利用、初期解数だけ最適化実施される、初期解は辞書型（keyが変数名、valueが変数値）で設定
             penalty_strength: ペナルティ係数の強さ、大きくするほど強くなる
             n_jobs: 並列実行数
-
         Returns:
             最適化の答え, 制約充足フラグ
         """
@@ -90,6 +91,7 @@ class OptSolver:
             self._round_times,
             self._num_to_tune_penalty,
             self._num_to_select_init_answer,
+            init_answers,
             penalty_strength,
             n_jobs)
 

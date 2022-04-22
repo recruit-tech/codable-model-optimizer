@@ -109,7 +109,7 @@ class SolverCategoryVariable(SolverVariable):
                     pre_value=0,
                     new_value=1)]
 
-    def values(self, var_value_array):
+    def decode(self, var_value_array):
         array_indexes = var_value_array[self._var_index:(self._var_index + self.array_size())]
         category_index = [index for index, value in enumerate(array_indexes) if value == 1][0]
         return self._categories[category_index]
@@ -118,3 +118,8 @@ class SolverCategoryVariable(SolverVariable):
         var_value = [0] * self._category_num
         var_value[random.randint(0, self._category_num - 1)] = 1
         return var_value
+
+    def encode(self, value: int) -> np.array:
+        if value not in self._categories:
+            raise ValueError(f'{value} is not in categories of Variable:{self._name}!')
+        return np.array([1.0 if category == value else 0 for category in self._categories])

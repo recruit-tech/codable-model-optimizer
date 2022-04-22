@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from copy import deepcopy
 
 import numpy as np
@@ -178,16 +178,34 @@ class SolverProblem:
         return self._solver_constraints.liner_constraints\
             .cancel_proposal_to_constraint_sums(proposals, cashed_constraint_sums)
 
-    def to_answer(self, var_value_array: np.array):
-        """呼び出し元の問題オブジェクトに基づき、解答を辞書型に変換して返す関数。
+    def encode_answer(self, answer: Dict[str, Any]):
+        """呼び出し元の問題オブジェクトに基づき、辞書型の変数の値をvar_value_arrayに変換して返す関数。
+
+        Args:
+            辞書型の変数の値、keyが変数名、valueが変数の値
+
+        Returns:
+            var_value_array (np.array): 変換元の解答
+        """
+        var_value_array_list = []
+        for variable in self._variables:
+            if variable.name in answer.keys():
+                var_value_array_list.append(variable.encode(answer[variable.name]))
+            else:
+                raise ValueError(f'Variable:{variable.name} has no value!')
+
+        return np.concatenate(var_value_array_list, axis=None)
+
+    def decode_answer(self, var_value_array: np.array):
+        """呼び出し元の問題オブジェクトに基づき、var_value_arrayを辞書型の変数の値に変換して返す関数。
 
         Args:
             var_value_array (np.array): 変換元の解答
 
         Returns:
-            辞書型の解答、keyが変数名、valueが変数の値
+            辞書型の変数の値、keyが変数名、valueが変数の値
         """
-        return {variable.name: variable.values(var_value_array) for variable in self._variables}
+        return {variable.name: variable.decode(var_value_array) for variable in self._variables}
 
     @property
     def variables(self) -> List[SolverVariable]:

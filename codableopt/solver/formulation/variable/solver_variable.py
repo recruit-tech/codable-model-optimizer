@@ -86,7 +86,28 @@ class SolverVariable(ABC):
             'move_on_force_to_improve is not implemented!')
 
     @abstractmethod
-    def values(self, var_value_array):
+    def random_values(self):
+        """変数のランダムな値を取得する関数。
+
+        Returns:
+            ランダムな値
+        """
+        raise NotImplementedError('random_value is not implemented!')
+
+    @abstractmethod
+    def encode(self, value) -> np.array:
+        """引数の値をエンコードして値を返す関数。
+
+        Args:
+            value: エンコード前の変数の値
+
+        Returns:
+            エンコード後の変数の値リスト
+        """
+        raise NotImplementedError('decode is not implemented!')
+
+    @abstractmethod
+    def decode(self, var_value_array):
         """変数の値を引数の変数の値の集合から取得する関数。
 
         Args:
@@ -96,15 +117,6 @@ class SolverVariable(ABC):
             変数の値
         """
         raise NotImplementedError('value is not implemented!')
-
-    @abstractmethod
-    def random_values(self):
-        """変数のランダムな値を取得する関数。
-
-        Returns:
-            ランダムな値
-        """
-        raise NotImplementedError('random_value is not implemented!')
 
     @property
     def name(self) -> str:
