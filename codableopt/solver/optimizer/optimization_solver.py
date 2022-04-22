@@ -92,13 +92,13 @@ class OptimizationSolver:
                 tasks = [
                     executor.submit(
                         self.__optimize,
-                        init_var_value_array=np.array(init_answer),
+                        init_var_value_array=init_var_value_array,
                         answers_to_tune=answers_to_tune,
                         penalty_strength_to_tune=penalty_strength,
                         method=copy.deepcopy(method),
                         problem=copy.deepcopy(problem),
                         round_no=round_no)
-                    for round_no, init_answer in enumerate(init_answers)
+                    for round_no, init_var_value_array in enumerate(init_var_value_array_list)
                 ]
                 results = [task.result() for task in tasks]
 
