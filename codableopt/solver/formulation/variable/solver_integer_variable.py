@@ -203,7 +203,7 @@ class SolverIntegerVariable(SolverVariable):
             pre_value=prev_value,
             new_value=new_val)]
 
-    def values(self, var_value_array):
+    def decode(self, var_value_array):
         return int(var_value_array[self._var_index])
 
     def random_values(self):
@@ -215,3 +215,6 @@ class SolverIntegerVariable(SolverVariable):
             upper = np.double(SolverVariable.VALUE_WHEN_NO_LIMIT)
 
         return [randint(lower, upper)]
+
+    def encode(self, value: int) -> np.array:
+        return np.array([value])

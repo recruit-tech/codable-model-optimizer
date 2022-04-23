@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 import copy
 from concurrent import futures
@@ -46,8 +46,9 @@ class OptimizationSolver:
             round_times: int,
             num_to_tune_penalty: int,
             num_to_select_init_answer: int,
+            init_answers: Optional[List[Dict[str, Any]]],
             penalty_strength: float,
-            n_jobs: int):
+            n_jobs: int,):
         """最適化を行う関数。
 
         Args:
@@ -56,6 +57,7 @@ class OptimizationSolver:
             round_times (int): 初期解を変えて、問題を解く回数
             num_to_tune_penalty (int): 初期のペナルティ係数を調整する際に利用する解答をランダム生成する数
             num_to_select_init_answer (int): 初期解を選択する時に、選択する元となる解答をランダム生成する数
+            init_answers: 初期解リスト、初期解を指定したい時に利用、初期解数だけ最適化実施される、初期解は辞書型（keyが変数名、valueが変数値）で設定
             penalty_strength: ペナルティ係数の強さ、大きくするほど強くなる
             n_jobs: 並列実行数
         Returns:
@@ -66,14 +68,18 @@ class OptimizationSolver:
 
         sampler = VarValueArraySampler()
         answers_to_tune = sampler.generate(problem, num_to_tune_penalty)
-        random_answers = sampler.generate(problem, num_to_select_init_answer)
-        init_answers = sampler.choice(random_answers, round_times)
+        if init_answers is None:
+            random_var_value_array_list = sampler.generate(problem, num_to_select_init_answer)
+            init_var_value_array_list = sampler.choice(random_var_value_array_list, round_times)
+        else:
+            init_var_value_array_list = \
+                [problem.encode_answer(init_answer) for init_answer in init_answers]
 
         if n_jobs == 1:
             results = []
-            for round_no, init_answer in enumerate(init_answers):
+            for round_no, init_var_value_array in enumerate(init_var_value_array_list):
                 state = self.__optimize(
-                    init_var_value_array=np.array(init_answer),
+                    init_var_value_array=init_var_value_array,
                     answers_to_tune=answers_to_tune,
                     penalty_strength_to_tune=penalty_strength,
                     method=copy.deepcopy(method),
@@ -86,13 +92,13 @@ class OptimizationSolver:
                 tasks = [
                     executor.submit(
                         self.__optimize,
-                        init_var_value_array=np.array(init_answer),
+                        init_var_value_array=init_var_value_array,
                         answers_to_tune=answers_to_tune,
                         penalty_strength_to_tune=penalty_strength,
                         method=copy.deepcopy(method),
                         problem=copy.deepcopy(problem),
                         round_no=round_no)
-                    for round_no, init_answer in enumerate(init_answers)
+                    for round_no, init_var_value_array in enumerate(init_var_value_array_list)
                 ]
                 results = [task.result() for task in tasks]
 
@@ -109,7 +115,7 @@ class OptimizationSolver:
                     and best_state.best_score.score > state.best_score.score:
                 best_state = state
 
-        return best_state.to_answer(best_state.best_var_array), best_state.exist_feasible_answer
+        return best_state.decode(best_state.best_var_array), best_state.exist_feasible_answer
 
     def __optimize(
             self,
