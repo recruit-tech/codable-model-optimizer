@@ -29,24 +29,30 @@ class OptimizationState:
 
         self._proposals = []
 
-        objective_score = self._problem.calc_objective(self._var_array, [])
-        self._cashed_objective_score = objective_score
-
         cashed_liner_constraint_sums = \
             self._problem.constraints.liner_constraints.calc_constraint_sums(self._var_array)
         self._cashed_liner_constraint_sums = cashed_liner_constraint_sums
         self._penalty_coefficients = self._problem.constraints.init_penalty_coefficients.copy()
         # tune前は1に仮置き
         self._constraints_scale = np.array([1.0 for _ in self._penalty_coefficients])
-
-        penalty_scores = self.calculate_penalties([])
-        penalty_scores = sum(penalty_scores)
-
-        self._previous_score = ScoreInfo(objective_score, penalty_scores)
-        self._current_score = ScoreInfo(objective_score, penalty_scores)
-        self._best_score = ScoreInfo(objective_score, penalty_scores)
-
         self._exist_feasible_answer = False
+        # tuning後に計算
+        self._cashed_objective_score = None
+        self._previous_score = None
+        self._current_score = None
+        self._best_score = None
+
+    def init_scores(self):
+        objective_score = self._problem.calc_objective(self._var_array, [])
+        penalty_scores = self.calculate_penalties([])
+        penalty_score = sum(penalty_scores)
+        if penalty_score == 0:
+            self._exist_feasible_answer = True
+
+        self._cashed_objective_score = objective_score
+        self._previous_score = ScoreInfo(objective_score, penalty_score)
+        self._current_score = ScoreInfo(objective_score, penalty_score)
+        self._best_score = ScoreInfo(objective_score, penalty_score)
 
     def propose(self, proposals: Sequence[ProposalToMove]):
         objective_score = self._problem.calc_objective(self._var_array,

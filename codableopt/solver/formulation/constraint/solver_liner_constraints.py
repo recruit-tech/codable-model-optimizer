@@ -181,3 +181,7 @@ class SolverLinerConstraints:
     @property
     def init_penalty_coefficients(self) -> np.array:
         return self._init_penalty_coefficients
+
+    @property
+    def is_no_constraint(self) -> bool:
+        return self._no_constraints

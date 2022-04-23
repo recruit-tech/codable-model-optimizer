@@ -75,3 +75,7 @@ class SolverConstraints:
     @property
     def init_penalty_coefficients(self) -> np.array:
         return self._init_penalty_coefficients
+
+    @property
+    def is_no_constraint(self) -> bool:
+        return self._liner_constraints.is_no_constraint and len(self._user_define_constraints) == 0

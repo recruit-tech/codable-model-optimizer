@@ -34,14 +34,16 @@ class Optimizer:
             method: OptimizerMethod,
             round_no: int,
             init_var_value_array: np.array,
-            var_value_arrays_to_tune,
+            var_value_arrays_to_tune: Optional,
             penalty_strength,
             debug_log_file_path: Optional[Path] = None):
         self._logger = getLogger(__name__)
         self._logger.setLevel(INFO)
 
         self._state = OptimizationState(problem, init_var_value_array)
-        self._state.tune_penalty(var_value_arrays_to_tune, np.double(penalty_strength))
+        if var_value_arrays_to_tune is not None:
+            self._state.tune_penalty(var_value_arrays_to_tune, np.double(penalty_strength))
+        self._state.init_scores()
 
         self._problem = problem
         self._method = method

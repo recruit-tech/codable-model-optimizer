@@ -67,7 +67,11 @@ class OptimizationSolver:
             n_jobs = multiprocessing.cpu_count()
 
         sampler = VarValueArraySampler()
-        answers_to_tune = sampler.generate(problem, num_to_tune_penalty)
+        if problem.is_no_constraint:
+            answers_to_tune = None
+        else:
+            answers_to_tune = sampler.generate(problem, num_to_tune_penalty)
+
         if init_answers is None:
             random_var_value_array_list = sampler.generate(problem, num_to_select_init_answer)
             init_var_value_array_list = sampler.choice(random_var_value_array_list, round_times)
@@ -120,7 +124,7 @@ class OptimizationSolver:
     def __optimize(
             self,
             init_var_value_array: np.array,
-            answers_to_tune: np.array,
+            answers_to_tune: Optional[np.array],
             penalty_strength_to_tune,
             method: OptimizerMethod,
             problem: SolverProblem,
