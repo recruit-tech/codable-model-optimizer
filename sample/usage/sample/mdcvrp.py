@@ -18,7 +18,6 @@ from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from itertools import combinations
 
-import numpy as np
 from pulp import *
 
 from codableopt import Problem, Objective, CategoryVariable, OptSolver, PenaltyAdjustmentMethod
@@ -125,11 +124,11 @@ class MultiDepotCVRProblem:
 
         demands_sum = sum(demands.values())
         # depot容量
-        depot_capacities = {x: int((0.5 + 1.0 * random.random()) * demands_sum / place_num)
+        depot_capacities = {x: int((0.5 + random.random()) * demands_sum / depot_num)
                             for x in depot_names}
-        while sum(depot_capacities.values()) >= demands_sum * 1.2:
+        while sum(depot_capacities.values()) <= demands_sum * 1.15:
             for x in depot_capacities.keys():
-                depot_capacities[x] = int(depot_capacities[x] * 1.2)
+                depot_capacities[x] = int(depot_capacities[x] * 1.1)
 
         return MultiDepotCVRProblem(
             depot_names=depot_names,
@@ -157,6 +156,7 @@ class CVRPSolver:
 
     @staticmethod
     def solve(problem: CVRProblem):
+        # TODO マルチスレッド
         place_num = len(problem.place_names)
 
         distances = {}
@@ -165,9 +165,11 @@ class CVRPSolver:
                 distances[(place_no_1, place_no_2)] = problem.distances[(place_1, place_2)]
 
         lp_problem = LpProblem('TSP', LpMinimize)
-        x = pulp.LpVariable.dicts('x', ((i, j) for i in range(place_num) for j in range(place_num)),
+        x = pulp.LpVariable.dicts('x',
+                                  ((i, j) for i in range(place_num) for j in range(place_num)),
                                   cat='Binary')
-        y = pulp.LpVariable.dicts('y', (i for i in range(place_num)),
+        y = pulp.LpVariable.dicts('y',
+                                  (i for i in range(place_num)),
                                   lowBound=0, upBound=problem.capacity, cat='Integer')
 
         lp_problem += pulp.lpSum(distances[(i, j)] * x[i, j]
@@ -193,7 +195,7 @@ class CVRPSolver:
                     lp_problem += y[j] - y[i] >= -problem.capacity * (1 - x[i, j]) \
                                   + problem.demands[place_name]
 
-        lp_problem.solve(pulp.PULP_CBC_CMD(msg=False))
+        lp_problem.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=60*3))
         return lp_problem.objective.value()
 
 
@@ -203,17 +205,15 @@ class MultiDepotCVRPSolver:
         pass
 
     @staticmethod
-    def solve(problem: MultiDepotCVRProblem, steps: int):
+    def solve(problem: MultiDepotCVRProblem):
         opt_problem = Problem(is_max_problem=False)
         x = [CategoryVariable(name=x, categories=[y for y in problem.depot_names])
              for x in problem.place_names]
         opt_problem += \
             Objective(objective=MultiDepotCVRPSolver.calc_obj,
-                      delta_objective=MultiDepotCVRPSolver.calc_delta_obj,
                       args_map={'var_x': x,
                                 'para_problem': problem,
-                                'cashed_part_obj':
-                                    np.array([0.0 for _ in problem.depot_names])})
+                                'cashed_part_obj': {}})
 
         # Depotの容量制限の制約式
         for depot_name in problem.depot_names:
@@ -223,59 +223,35 @@ class MultiDepotCVRPSolver:
 
         # 初期解指定
         init_answer = MultiDepotCVRPSolver.generate_init_answer(problem)
-        solver = OptSolver(round_times=1, debug=True, debug_unit_step=5, num_to_tune_penalty=10)
-        method = PenaltyAdjustmentMethod(steps=steps)
+        solver = OptSolver(debug=True, debug_unit_step=100, num_to_tune_penalty=10)
+        method = PenaltyAdjustmentMethod(steps=5000)
         dict_answer, is_feasible = solver.solve(opt_problem, method, init_answers=[init_answer])
 
         return dict_answer, is_feasible
 
     @staticmethod
-    def calc_obj(var_x, para_problem: MultiDepotCVRProblem, cashed_part_obj):
+    def calc_obj(var_x, para_problem: MultiDepotCVRProblem, cashed_part_obj: Dict[str, float]):
         obj = 0
         for depot_no, depot_name in enumerate(para_problem.depot_names):
             place_noes = [place_no for place_no, val in enumerate(var_x) if val == depot_name]
             if len(place_noes) > 0:
                 child_problem = para_problem.to_child_problem(depot_no=depot_no,
                                                               place_noes=place_noes)
-                part_obj = CVRPSolver.solve(child_problem)
+                cash_key = depot_name + '_' + '_'.join([str(x) for x in place_noes])
+                if cash_key in cashed_part_obj.keys():
+                    # キャッシュから子問題の目的関数値を取得
+                    part_obj = cashed_part_obj[cash_key]
+                else:
+                    # 子問題の目的関数値を計算
+                    part_obj = CVRPSolver.solve(child_problem)
+                    # 差分計算用にキャッシュ
+                    cashed_part_obj[cash_key] = part_obj
             else:
                 part_obj = 0
 
             obj += part_obj
-            # 差分計算用にキャッシュ
-            cashed_part_obj[depot_no] = part_obj
 
         return obj
-
-    @staticmethod
-    def calc_delta_obj(pre_var_x, var_x, para_problem: MultiDepotCVRProblem, cashed_part_obj):
-        delta_obj = 0
-        updated_part_obj_list = []
-
-        for depot_no, depot_name in enumerate(para_problem.depot_names):
-            pre_place_noes = [place_no for place_no, val in enumerate(pre_var_x) if
-                              val == depot_name]
-            place_noes = [place_no for place_no, val in enumerate(var_x) if val == depot_name]
-            if len(pre_place_noes) == len(place_noes) and \
-                    sum([a != b for a, b in zip(pre_place_noes, place_noes)]) == 0:
-                continue
-
-            delta_obj -= cashed_part_obj[depot_no]
-            if len(place_noes) > 0:
-                child_problem = para_problem.to_child_problem(depot_no=depot_no,
-                                                              place_noes=place_noes)
-                part_obj = CVRPSolver.solve(child_problem)
-            else:
-                part_obj = 0
-            delta_obj += part_obj
-
-            updated_part_obj_list.append((depot_no, part_obj))
-
-        if delta_obj < 0:
-            # 差分計算用にキャッシュ
-            for depot_no, part_obj in updated_part_obj_list:
-                cashed_part_obj[depot_no] = part_obj
-        return delta_obj
 
     @staticmethod
     def generate_init_answer(problem: MultiDepotCVRProblem):
@@ -294,5 +270,5 @@ class MultiDepotCVRPSolver:
         return init_answer
 
 
-mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=10, place_num=100)
-MultiDepotCVRPSolver.solve(mdcvr_problem, steps=200)
+mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=5, place_num=30)
+MultiDepotCVRPSolver.solve(mdcvr_problem)
