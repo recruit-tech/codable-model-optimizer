@@ -18,6 +18,7 @@ from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from itertools import combinations
 import multiprocessing
+import colorsys
 
 from pulp import *
 from geopy.distance import geodesic
@@ -349,9 +350,7 @@ class MapGenerator:
                 fill_color='#2f17d0',
             ).add_to(fmap)
 
-        for root in roots:
-            color_code = MapGenerator.from_rgb_to_color_code(
-                (random.randint(1, 200), random.randint(1, 200), random.randint(1, 200)))
+        for root, color_code in zip(roots, MapGenerator.generate_color_codes(len(roots))):
             for start_name, end_name in zip(root[:-1], root[1:]):
                 point_to_point = (problem.coordinates[start_name], problem.coordinates[end_name])
                 fmap.add_child(folium.PolyLine(point_to_point, color=color_code))
@@ -359,12 +358,17 @@ class MapGenerator:
         fmap.save('mdcvrp_answer.html')
 
     @staticmethod
-    def from_rgb_to_color_code(rgb):
-        return '#%02x%02x%02x' % rgb
+    def generate_color_codes(color_num: int):
+        color_codes = []
+        for color_no in range(color_num):
+            rgb = colorsys.hsv_to_rgb(1.0 / color_num * color_no, 0.7, 0.7)
+            rgb = (int(rgb[0] * 255), int(rgb[1] * 255), int(rgb[2] * 255))
+            color_codes.append('#%02x%02x%02x' % rgb)
+        return color_codes
 
 
-mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=3, place_num=15)
-answer_objective, answer_roots = MultiDepotCVRPSolver.solve(mdcvr_problem, steps=2000)
+mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=10, place_num=50)
+answer_objective, answer_roots = MultiDepotCVRPSolver.solve(mdcvr_problem, steps=1000)
 
 if answer_objective is None:
     print('No Answer!')
