@@ -17,8 +17,11 @@ import math
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from itertools import combinations
+import multiprocessing
 
 from pulp import *
+from geopy.distance import geodesic
+import folium
 
 from codableopt import Problem, Objective, CategoryVariable, OptSolver, PenaltyAdjustmentMethod
 
@@ -70,7 +73,7 @@ class CVRProblem:
     @staticmethod
     def generate_problem(depot_name: str,
                          place_names: List[str],
-                         coordinates: Dict[str, Tuple[int, int]],
+                         coordinates: Dict[str, Tuple[float, float]],
                          demands: Dict[str, int],
                          capacity: int):
         # 距離生成関数
@@ -80,8 +83,7 @@ class CVRProblem:
             for point_to_point in combinations(args_place_names, 2):
                 coordinate_a = args_coordinates[point_to_point[0]]
                 coordinate_b = args_coordinates[point_to_point[1]]
-                distance_value = math.sqrt(math.pow(coordinate_a[0] - coordinate_b[0], 2) +
-                                           math.pow(coordinate_a[1] - coordinate_b[1], 2))
+                distance_value = geodesic(coordinate_a, coordinate_b).km
                 generated_distances[point_to_point] = distance_value
                 generated_distances[tuple(reversed(point_to_point))] = distance_value
             for args_place_name in args_place_names:
@@ -109,13 +111,17 @@ class MultiDepotCVRProblem:
     demands: Dict[str, int]
     capacity: int
     depot_capacities: Dict[str, int]
+    MIN_LONGITUDE = 35.347980
+    MAX_LONGITUDE = 35.596265
+    MIN_LATITUDE = 139.349233
+    MAX_LATITUDE = 139.581319
 
     @staticmethod
     def generate(depot_num: int, place_num: int):
         depot_names = [f'D{no}' for no in range(depot_num)]
         place_names = [f'P{no}' for no in range(place_num)]
-        # 座標を生成
-        coordinates = {name: (random.randint(1, 1000), random.randint(1, 1000))
+
+        coordinates = {name: MultiDepotCVRProblem.generate_random_coordinate()
                        for name in (depot_names + place_names)}
         # 需要量
         demands = {name: random.randint(10, 50) for name in (depot_names + place_names)}
@@ -139,6 +145,14 @@ class MultiDepotCVRProblem:
             depot_capacities=depot_capacities
         )
 
+    @staticmethod
+    def generate_random_coordinate() -> Tuple[float, float]:
+        longitude = random.randrange(int(MultiDepotCVRProblem.MIN_LONGITUDE * 1000000),
+                                     int(MultiDepotCVRProblem.MAX_LONGITUDE * 1000000), 1)
+        latitude = random.randrange(int(MultiDepotCVRProblem.MIN_LATITUDE * 1000000),
+                                    int(MultiDepotCVRProblem.MAX_LATITUDE * 1000000), 1)
+        return float(longitude) / 1000000, float(latitude) / 1000000
+
     def to_child_problem(self, depot_no: int, place_noes: List[int]) -> CVRProblem:
         return CVRProblem.generate_problem(
             depot_name=self.depot_names[depot_no],
@@ -155,8 +169,7 @@ class CVRPSolver:
         pass
 
     @staticmethod
-    def solve(problem: CVRProblem):
-        # TODO マルチスレッド
+    def solve(problem: CVRProblem) -> Tuple[float, List[List[str]]]:
         place_num = len(problem.place_names)
 
         distances = {}
@@ -171,7 +184,6 @@ class CVRPSolver:
         y = pulp.LpVariable.dicts('y',
                                   (i for i in range(place_num)),
                                   lowBound=0, upBound=problem.capacity, cat='Integer')
-
         lp_problem += pulp.lpSum(distances[(i, j)] * x[i, j]
                                  for i in range(place_num)
                                  for j in range(place_num))
@@ -195,8 +207,22 @@ class CVRPSolver:
                     lp_problem += y[j] - y[i] >= -problem.capacity * (1 - x[i, j]) \
                                   + problem.demands[place_name]
 
-        lp_problem.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=60*3))
-        return lp_problem.objective.value()
+        lp_problem.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=60*3,
+                                           threads=multiprocessing.cpu_count()))
+        roots = []
+        for start_place_no in range(place_num):
+            if value(x[0, start_place_no]) == 1:
+                root = [0, start_place_no]
+                current_place_no = start_place_no
+                while current_place_no != 0:
+                    for next_place_no in range(place_num):
+                        if value(x[current_place_no, next_place_no]) == 1:
+                            current_place_no = next_place_no
+                            root.append(next_place_no)
+                            break
+                roots.append([problem.place_names[i] for i in root])
+
+        return lp_problem.objective.value(), roots
 
 
 class MultiDepotCVRPSolver:
@@ -205,7 +231,7 @@ class MultiDepotCVRPSolver:
         pass
 
     @staticmethod
-    def solve(problem: MultiDepotCVRProblem):
+    def solve(problem: MultiDepotCVRProblem, steps: int):
         opt_problem = Problem(is_max_problem=False)
         x = [CategoryVariable(name=x, categories=[y for y in problem.depot_names])
              for x in problem.place_names]
@@ -224,10 +250,15 @@ class MultiDepotCVRPSolver:
         # 初期解指定
         init_answer = MultiDepotCVRPSolver.generate_init_answer(problem)
         solver = OptSolver(debug=True, debug_unit_step=100, num_to_tune_penalty=10)
-        method = PenaltyAdjustmentMethod(steps=5000)
+        method = PenaltyAdjustmentMethod(steps=steps)
         dict_answer, is_feasible = solver.solve(opt_problem, method, init_answers=[init_answer])
 
-        return dict_answer, is_feasible
+        # 実行可能解を見つけられなかった場合
+        if not is_feasible:
+            return None, None
+
+        return MultiDepotCVRPSolver.calc_obj_and_roots(
+            [dict_answer[x] for x in problem.place_names], problem)
 
     @staticmethod
     def calc_obj(var_x, para_problem: MultiDepotCVRProblem, cashed_part_obj: Dict[str, float]):
@@ -243,7 +274,7 @@ class MultiDepotCVRPSolver:
                     part_obj = cashed_part_obj[cash_key]
                 else:
                     # 子問題の目的関数値を計算
-                    part_obj = CVRPSolver.solve(child_problem)
+                    part_obj, _ = CVRPSolver.solve(child_problem)
                     # 差分計算用にキャッシュ
                     cashed_part_obj[cash_key] = part_obj
             else:
@@ -252,6 +283,21 @@ class MultiDepotCVRPSolver:
             obj += part_obj
 
         return obj
+
+    @staticmethod
+    def calc_obj_and_roots(var_x, para_problem: MultiDepotCVRProblem):
+        obj = 0
+        roots = []
+        for depot_no, depot_name in enumerate(para_problem.depot_names):
+            place_noes = [place_no for place_no, val in enumerate(var_x) if val == depot_name]
+            if len(place_noes) > 0:
+                child_problem = para_problem.to_child_problem(depot_no=depot_no,
+                                                              place_noes=place_noes)
+                part_obj, part_roots = CVRPSolver.solve(child_problem)
+                obj += part_obj
+                roots.extend(part_roots)
+
+        return obj, roots
 
     @staticmethod
     def generate_init_answer(problem: MultiDepotCVRProblem):
@@ -270,5 +316,58 @@ class MultiDepotCVRPSolver:
         return init_answer
 
 
-mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=5, place_num=30)
-MultiDepotCVRPSolver.solve(mdcvr_problem)
+class MapGenerator:
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def save_map_html(problem: MultiDepotCVRProblem, roots: List[List[str]]):
+        # 解答可視化
+        fmap = folium.Map(
+            [(MultiDepotCVRProblem.MIN_LONGITUDE + MultiDepotCVRProblem.MAX_LONGITUDE) / 2,
+             (MultiDepotCVRProblem.MIN_LATITUDE + MultiDepotCVRProblem.MAX_LATITUDE) / 2],
+            zoom_start=11)
+
+        for depot_name in problem.depot_names:
+            folium.CircleMarker(
+                location=problem.coordinates[depot_name],
+                radius=math.sqrt(problem.depot_capacities[depot_name]),
+                popup=f'{depot_name}:{problem.depot_capacities[depot_name]}',
+                color='#B1221A',
+                fill=True,
+                fill_color='#B1221A',
+            ).add_to(fmap)
+
+        for place_name in problem.place_names:
+            folium.CircleMarker(
+                location=problem.coordinates[place_name],
+                radius=math.sqrt(problem.demands[place_name]),
+                popup=f'{place_name}:{problem.demands[place_name]}',
+                color='#2f17d0',
+                fill=True,
+                fill_color='#2f17d0',
+            ).add_to(fmap)
+
+        for root in roots:
+            color_code = MapGenerator.from_rgb_to_color_code(
+                (random.randint(1, 200), random.randint(1, 200), random.randint(1, 200)))
+            for start_name, end_name in zip(root[:-1], root[1:]):
+                point_to_point = (problem.coordinates[start_name], problem.coordinates[end_name])
+                fmap.add_child(folium.PolyLine(point_to_point, color=color_code))
+
+        fmap.save('mdcvrp_answer.html')
+
+    @staticmethod
+    def from_rgb_to_color_code(rgb):
+        return '#%02x%02x%02x' % rgb
+
+
+mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=3, place_num=15)
+answer_objective, answer_roots = MultiDepotCVRPSolver.solve(mdcvr_problem, steps=2000)
+
+if answer_objective is None:
+    print('No Answer!')
+else:
+    print(f'Total Distance {answer_objective} km')
+    MapGenerator.save_map_html(mdcvr_problem, answer_roots)
