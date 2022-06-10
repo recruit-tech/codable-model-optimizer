@@ -77,23 +77,20 @@ class CVRProblem:
                          coordinates: Dict[str, Tuple[float, float]],
                          demands: Dict[str, int],
                          capacity: int):
-        # 距離生成関数
-        def generate_distances(args_place_names, args_coordinates):
-            # ポイント間の距離を生成
-            generated_distances = {}
-            for point_to_point in combinations(args_place_names, 2):
-                coordinate_a = args_coordinates[point_to_point[0]]
-                coordinate_b = args_coordinates[point_to_point[1]]
-                distance_value = geodesic(coordinate_a, coordinate_b).km
-                generated_distances[point_to_point] = distance_value
-                generated_distances[tuple(reversed(point_to_point))] = distance_value
-            for args_place_name in args_place_names:
-                generated_distances[(args_place_name, args_place_name)] = 0
-
-            return generated_distances
-
-        # 距離を生成
-        distances = generate_distances([depot_name] + place_names, coordinates)
+        # 距離を計算
+        # 分解前に全ての地点間の距離を1度計算すれば、子問題分解時に計算しなくて良いが、
+        # 一方で地点数が非常に多い場合は、組み合わせ数が多く、実際に使われない地点間の計算も行われ、
+        # 非効率になる場合もあるためこのサンプルコードでは分解後に計算している。
+        distances = {}
+        depot_and_place_names = [depot_name] + place_names
+        for point_to_point in combinations(depot_and_place_names, 2):
+            coordinate_a = coordinates[point_to_point[0]]
+            coordinate_b = coordinates[point_to_point[1]]
+            distance_value = geodesic(coordinate_a, coordinate_b).km
+            distances[point_to_point] = distance_value
+            distances[tuple(reversed(point_to_point))] = distance_value
+        for args_place_name in depot_and_place_names:
+            distances[(args_place_name, args_place_name)] = 0
 
         return CVRProblem(
             depot_name=depot_name,
@@ -367,7 +364,7 @@ class MapGenerator:
         return color_codes
 
 
-mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=10, place_num=50)
+mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=8, place_num=80)
 answer_objective, answer_roots = MultiDepotCVRPSolver.solve(mdcvr_problem, steps=1000)
 
 if answer_objective is None:
