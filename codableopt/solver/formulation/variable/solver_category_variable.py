@@ -60,21 +60,24 @@ class SolverCategoryVariable(SolverVariable):
             new_value=0)
 
         for new_hot_index in range(self._var_index, self._var_index + self._category_num):
-            if new_hot_index != hot_index:
-                proposal_to_hot = ProposalToMove(
-                    var_no=self._var_no,
-                    var_index=new_hot_index,
-                    pre_value=0,
-                    new_value=1)
-                # ペナルティスコアで比較
-                penalty_score = state.calculate_penalties([proposal_to_cold, proposal_to_hot])
+            proposal_to_hot = ProposalToMove(
+                var_no=self._var_no,
+                var_index=new_hot_index,
+                pre_value=0,
+                new_value=1)
+            # ペナルティスコアで比較
+            penalty_score = state.calculate_penalties([proposal_to_cold, proposal_to_hot])
 
+            if new_hot_index == hot_index:
+                proposal_list = []
+            else:
                 proposal_list = [proposal_to_cold, proposal_to_hot]
-                if minimum_penalty_score is None or minimum_penalty_score > penalty_score:
-                    best_proposal_list_groups = [proposal_list]
-                    minimum_penalty_score = penalty_score
-                elif minimum_penalty_score == penalty_score:
-                    best_proposal_list_groups.append(proposal_list)
+
+            if minimum_penalty_score is None or minimum_penalty_score > penalty_score:
+                best_proposal_list_groups = [proposal_list]
+                minimum_penalty_score = penalty_score
+            elif minimum_penalty_score == penalty_score:
+                best_proposal_list_groups.append(proposal_list)
 
         return random.choice(best_proposal_list_groups)
 
