@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from itertools import combinations
 import multiprocessing
 import colorsys
+from pathlib import Path
 
 from pulp import *
 from geopy.distance import geodesic
@@ -320,7 +321,7 @@ class MapGenerator:
         pass
 
     @staticmethod
-    def save_map_html(problem: MultiDepotCVRProblem, roots: List[List[str]]):
+    def save_map_html(problem: MultiDepotCVRProblem, roots: List[List[str]], html_path: Path):
         # 解答可視化
         fmap = folium.Map(
             [(MultiDepotCVRProblem.MIN_LONGITUDE + MultiDepotCVRProblem.MAX_LONGITUDE) / 2,
@@ -352,7 +353,7 @@ class MapGenerator:
                 point_to_point = (problem.coordinates[start_name], problem.coordinates[end_name])
                 fmap.add_child(folium.PolyLine(point_to_point, color=color_code))
 
-        fmap.save('mdcvrp_answer.html')
+        fmap.save(html_path)
 
     @staticmethod
     def generate_color_codes(color_num: int):
@@ -364,11 +365,11 @@ class MapGenerator:
         return color_codes
 
 
-mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=8, place_num=80)
+mdcvr_problem = MultiDepotCVRProblem.generate(depot_num=8, place_num=40)
 answer_objective, answer_roots = MultiDepotCVRPSolver.solve(mdcvr_problem, steps=1000)
 
 if answer_objective is None:
     print('No Answer!')
 else:
     print(f'Total Distance {answer_objective} km')
-    MapGenerator.save_map_html(mdcvr_problem, answer_roots)
+    MapGenerator.save_map_html(mdcvr_problem, answer_roots, Path('mdcvrp_answer.html'))
