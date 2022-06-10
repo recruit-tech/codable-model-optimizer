@@ -155,5 +155,5 @@ Sample2
     answer, is_feasible = solver.solve(problem, method, n_jobs=-1)
 
     print(f'answer_is_feasible:{is_feasible}')
-    root = ["start"] + [answer[root] for root in destination_names] + ["start"]
+    root = ['start'] + [answer[root] for root in destination_names] + ['start']
     print(f'root: {" -> ".join(root)}')
