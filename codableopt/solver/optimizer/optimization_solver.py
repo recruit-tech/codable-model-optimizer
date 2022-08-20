@@ -15,10 +15,10 @@
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import copy
-from concurrent import futures
 import multiprocessing
 
 import numpy as np
+from loky import get_reusable_executor
 
 from codableopt.solver.optimizer.method.optimizer_method import OptimizerMethod
 from codableopt.solver.optimizer.optimizer import Optimizer
@@ -82,26 +82,33 @@ class OptimizationSolver:
         if n_jobs == 1:
             results = []
             for round_no, init_var_value_array in enumerate(init_var_value_array_list):
-                state = self.__optimize(
+                state = OptimizationSolver.__optimize(
                     init_var_value_array=init_var_value_array,
                     answers_to_tune=answers_to_tune,
                     penalty_strength_to_tune=penalty_strength,
                     method=copy.deepcopy(method),
                     problem=copy.deepcopy(problem),
-                    round_no=round_no
+                    round_no=round_no,
+                    debug=self._debug,
+                    debug_step_unit=self._debug_step_unit,
+                    debug_log_file_path=self._debug_log_file_path
                 )
                 results.append(state)
         else:
-            with futures.ThreadPoolExecutor(max_workers=n_jobs) as executor:
+            with get_reusable_executor(max_workers=n_jobs) as executor:
                 tasks = [
                     executor.submit(
-                        self.__optimize,
+                        OptimizationSolver.__optimize,
                         init_var_value_array=init_var_value_array,
                         answers_to_tune=answers_to_tune,
                         penalty_strength_to_tune=penalty_strength,
                         method=copy.deepcopy(method),
                         problem=copy.deepcopy(problem),
-                        round_no=round_no)
+                        round_no=round_no,
+                        debug=self._debug,
+                        debug_step_unit=self._debug_step_unit,
+                        debug_log_file_path=self._debug_log_file_path
+                    )
                     for round_no, init_var_value_array in enumerate(init_var_value_array_list)
                 ]
                 results = [task.result() for task in tasks]
@@ -121,14 +128,17 @@ class OptimizationSolver:
 
         return best_state.decode(best_state.best_var_array), best_state.exist_feasible_answer
 
+    @staticmethod
     def __optimize(
-            self,
             init_var_value_array: np.array,
             answers_to_tune: Optional[np.array],
             penalty_strength_to_tune,
             method: OptimizerMethod,
             problem: SolverProblem,
-            round_no: int):
+            round_no: int,
+            debug: bool,
+            debug_step_unit: int,
+            debug_log_file_path: Optional[Path]):
         optimizer = Optimizer(
             method=method,
             problem=problem,
@@ -136,6 +146,6 @@ class OptimizationSolver:
             init_var_value_array=init_var_value_array,
             var_value_arrays_to_tune=answers_to_tune,
             penalty_strength=penalty_strength_to_tune,
-            debug_log_file_path=self._debug_log_file_path
+            debug_log_file_path=debug_log_file_path
         )
-        return optimizer.optimize(self._debug, self._debug_step_unit)
+        return optimizer.optimize(debug, debug_step_unit)
