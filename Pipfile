@@ -12,7 +12,7 @@ folium = "*"
 
 [packages]
 numpy = "==1.22.0"
-loky = "*"
+loky = "==3.1.0"
 
 [requires]
 python_version = "3.7"
