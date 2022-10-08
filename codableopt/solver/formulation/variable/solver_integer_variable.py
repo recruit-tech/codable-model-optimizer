@@ -41,7 +41,11 @@ class SolverIntegerVariable(SolverVariable):
         return 1
 
     def propose_low_penalty_move(self, state: OptimizationState) -> List[ProposalToMove]:
+        if state.problem.is_no_constraint:
+            raise ValueError('propose_low_penalty_move function need constraint to use!')
+
         prev_value = state.var_array[self._var_index]
+
         lower, upper = state.problem.constraints.liner_constraints.calc_var_range_in_feasible(
             state.var_array,
             var_index=self._var_index,

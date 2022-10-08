@@ -80,7 +80,7 @@ class PenaltyAdjustmentMethod(OptimizerMethod):
     def propose(self, state: OptimizationState, step: int) -> List[ProposalToMove]:
         while True:
             variable = choice(state.problem.variables)
-            if random.random() <= self._random_movement_rate:
+            if random.random() <= self._random_movement_rate or state.problem.is_no_constraint:
                 if isinstance(variable, (SolverIntegerVariable, SolverDoubleVariable)):
                     if variable.name not in self._number_variables_history.keys():
                         self._proposal_list = variable.propose_random_move(state.var_array)
