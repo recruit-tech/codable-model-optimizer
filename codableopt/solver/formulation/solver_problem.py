@@ -217,7 +217,7 @@ class SolverProblem:
 
     @property
     def is_no_constraint(self) -> bool:
-        return self._solver_constraints.is_no_constraint == 0
+        return self._solver_constraints.is_no_constraint
 
     @staticmethod
     def _to_solver_constraint(
