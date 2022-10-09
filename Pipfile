@@ -11,8 +11,8 @@ geopy = "*"
 folium = "*"
 
 [packages]
-numpy = "==1.22.0"
-loky = "==3.1.0"
+numpy = "==1.21.0"
+loky = "==3.3.0"
 
 [requires]
 python_version = "3.7"
